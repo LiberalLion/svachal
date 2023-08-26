@@ -101,83 +101,84 @@ class YML2DOT:
 
   def update_nodes_edges(self, parent, child, indent=0, borderless=False):
     def update_nodes(node, spaces, indent, borderless):
-      if node not in self.nodesdict:
-        label, href, tooltip, image = node, None, node, None
-        match = re.match(r'^{{\s*(.*)\s*}}$', node, re.M)
-        if match:
-          tooltip = match.groups()[0]
-          label = tooltip
-        match = re.match(r'^\[\s*(.*)\s*\]\s*\(\s*(.*)\s*\)$', node, re.M)
-        if match:
-          label, href = match.groups()
-          tooltip = label
-        match = re.match(r'^\[\s*(.*)\s*\]\s*\(\s*(.*)\s*\)\s*{{\s*(.*)\s*}}$', node, re.M)
-        if match:
-          label, href, tooltip = match.groups()
+      if node in self.nodesdict:
+        return
+      label, href, tooltip, image = node, None, node, None
+      match = re.match(r'^{{\s*(.*)\s*}}$', node, re.M)
+      if match:
+        tooltip = match.groups()[0]
+        label = tooltip
+      match = re.match(r'^\[\s*(.*)\s*\]\s*\(\s*(.*)\s*\)$', node, re.M)
+      if match:
+        label, href = match.groups()
+        tooltip = label
+      match = re.match(r'^\[\s*(.*)\s*\]\s*\(\s*(.*)\s*\)\s*{{\s*(.*)\s*}}$', node, re.M)
+      if match:
+        label, href, tooltip = match.groups()
 
-        match = re.match(r'^!\[\s*(.*)\s*\]\s*\(\s*(.*)\s*\)$', node, re.M)
-        if match:
-          label, image = match.groups()
-          tooltip = label
-        match = re.match(r'^!\[\s*(.*)\s*\]\s*\(\s*(.*)\s*\)\s*{{\s*(.*)\s*}}$', node, re.M)
-        if match:
-          label, image, tooltip = match.groups()
+      match = re.match(r'^!\[\s*(.*)\s*\]\s*\(\s*(.*)\s*\)$', node, re.M)
+      if match:
+        label, image = match.groups()
+        tooltip = label
+      match = re.match(r'^!\[\s*(.*)\s*\]\s*\(\s*(.*)\s*\)\s*{{\s*(.*)\s*}}$', node, re.M)
+      if match:
+        label, image, tooltip = match.groups()
 
-        nodecolor = secrets.choice(self.config["colorpallete"]) if self.config["randomnodecolor"] else self.config["colornode"]
-        self.config["writeupyml"] = False
-        bordercolor = self.config["colorborder"]
-        if label.startswith("_ "):
-          self.config["writeupyml"] = True
-          self.config["cluster0"]["title"], label = label.split("_ ")[1].split("/")
-          tooltip = self.config["cluster0"]["title"]
-          nodecolor = self.config["cluster0"]["colornode"]
-          bordercolor = self.config["cluster0"]["colorborder"]
-        elif label.startswith(". "):
-          self.config["writeupyml"] = True
-          label = label.split(". ")[1]
-          tooltip = self.config["cluster1"]["title"]
-          nodecolor = self.config["cluster1"]["colornode"]
-          bordercolor = self.config["cluster1"]["colorborder"]
-        elif label.startswith(".. "):
-          self.config["writeupyml"] = True
-          label = label.split(".. ")[1]
-          tooltip = self.config["cluster2"]["title"]
-          nodecolor = self.config["cluster2"]["colornode"]
-          bordercolor = self.config["cluster2"]["colorborder"]
-        elif label.startswith("... "):
-          self.config["writeupyml"] = True
-          label = label.split("... ")[1]
-          tooltip = self.config["cluster3"]["title"]
-          nodecolor = self.config["cluster3"]["colornode"]
-          bordercolor = self.config["cluster3"]["colorborder"]
+      nodecolor = secrets.choice(self.config["colorpallete"]) if self.config["randomnodecolor"] else self.config["colornode"]
+      self.config["writeupyml"] = False
+      bordercolor = self.config["colorborder"]
+      if label.startswith("_ "):
+        self.config["writeupyml"] = True
+        self.config["cluster0"]["title"], label = label.split("_ ")[1].split("/")
+        tooltip = self.config["cluster0"]["title"]
+        nodecolor = self.config["cluster0"]["colornode"]
+        bordercolor = self.config["cluster0"]["colorborder"]
+      elif label.startswith(". "):
+        self.config["writeupyml"] = True
+        label = label.split(". ")[1]
+        tooltip = self.config["cluster1"]["title"]
+        nodecolor = self.config["cluster1"]["colornode"]
+        bordercolor = self.config["cluster1"]["colorborder"]
+      elif label.startswith(".. "):
+        self.config["writeupyml"] = True
+        label = label.split(".. ")[1]
+        tooltip = self.config["cluster2"]["title"]
+        nodecolor = self.config["cluster2"]["colornode"]
+        bordercolor = self.config["cluster2"]["colorborder"]
+      elif label.startswith("... "):
+        self.config["writeupyml"] = True
+        label = label.split("... ")[1]
+        tooltip = self.config["cluster3"]["title"]
+        nodecolor = self.config["cluster3"]["colornode"]
+        bordercolor = self.config["cluster3"]["colorborder"]
 
-        self.nodesdict[node] = {
-          "nodeid": len(self.nodesdict),
-          "label": label,
-          "href": href,
-          "image": image,
-          "tooltip": tooltip,
-          "color": nodecolor,
-          "colorborder": bordercolor,
-        }
-        self.nodesdict[node]["colorborder"] = self.nodesdict[node]["color"] if borderless else self.nodesdict[node]["colorborder"]
+      self.nodesdict[node] = {
+        "nodeid": len(self.nodesdict),
+        "label": label,
+        "href": href,
+        "image": image,
+        "tooltip": tooltip,
+        "color": nodecolor,
+        "colorborder": bordercolor,
+      }
+      self.nodesdict[node]["colorborder"] = self.nodesdict[node]["color"] if borderless else self.nodesdict[node]["colorborder"]
 
-        attribs = []
+      attribs = []
 
-        if self.nodesdict[node]["image"]:
-          attribs.append("label=\"\"")
-          attribs.append("image=\"%s\"" % (self.nodesdict[node]["image"]))
-        else:
-          attribs.append("label=\"%s\"" % (self.nodesdict[node]["label"]))
+      if self.nodesdict[node]["image"]:
+        attribs.append("label=\"\"")
+        attribs.append("image=\"%s\"" % (self.nodesdict[node]["image"]))
+      else:
+        attribs.append("label=\"%s\"" % (self.nodesdict[node]["label"]))
 
-        if self.nodesdict[node]["href"]:
-          attribs.append("href=\"%s\"" % (self.nodesdict[node]["href"]))
-          attribs.append("fontcolor=\"%s\"" % (self.config["colorlink"]))
+      if self.nodesdict[node]["href"]:
+        attribs.append("href=\"%s\"" % (self.nodesdict[node]["href"]))
+        attribs.append("fontcolor=\"%s\"" % (self.config["colorlink"]))
 
-        attribs.append("color=\"%s\"" % (self.nodesdict[node]["colorborder"]))
-        attribs.append("fillcolor=\"%s\"" % (self.nodesdict[node]["color"]))
-        attribs.append("tooltip=\"%s\"" % (self.nodesdict[node]["tooltip"]))
-        self.nodes.append("%s%d[%s];" % (spaces, self.nodesdict[node]["nodeid"], " ".join(attribs)))
+      attribs.append("color=\"%s\"" % (self.nodesdict[node]["colorborder"]))
+      attribs.append("fillcolor=\"%s\"" % (self.nodesdict[node]["color"]))
+      attribs.append("tooltip=\"%s\"" % (self.nodesdict[node]["tooltip"]))
+      self.nodes.append("%s%d[%s];" % (spaces, self.nodesdict[node]["nodeid"], " ".join(attribs)))
 
     spaces = " " * indent
 
@@ -200,57 +201,62 @@ class YML2DOT:
     self.get_edges(ymldata)
     self.nodes, self.edges = sorted(list(set(self.nodes))), sorted(list(set(self.edges)))
 
-    dotgraph = []
-    dotgraph.append("digraph G {")
-    dotgraph.append("  rankdir=LR;" if self.config["rankdirlr"] else "  #rankdir=LR;")
-    dotgraph.append("  nodesdictep=1.0; splines=\"ortho\"; K=0.6; overlap=scale; fixedsize=true; resolution=72; bgcolor=\"%s\"; outputorder=\"edgesfirst\";" % (self.config["colorbg"]))
-    dotgraph.append("  node [fontname=\"courier\" fontsize=%s shape=box width=0.25 fillcolor=\"white\" style=\"filled,solid\"];" % (self.config["fontsize"]))
-    dotgraph.append("  edge [style=solid color=\"%s\" penwidth=0.75 arrowhead=vee arrowsize=0.75 ];" % (self.config["coloredge"]))
-    dotgraph.append("")
-    dotgraph.extend(["  %s" % (x) for x in self.nodes])
-    dotgraph.append("")
-    dotgraph.append("  subgraph cluster_0 {")
-    dotgraph.append("    node [style=\"filled,solid\"];")
-    dotgraph.append("    label = \"%s\";" % (self.config["cluster0"]["title"] if self.config["writeupyml"] else os.path.basename(dotfile)))
+    dotgraph = [
+        "digraph G {",
+        "  rankdir=LR;" if self.config["rankdirlr"] else "  #rankdir=LR;",
+        "  nodesdictep=1.0; splines=\"ortho\"; K=0.6; overlap=scale; fixedsize=true; resolution=72; bgcolor=\"%s\"; outputorder=\"edgesfirst\";"
+        % self.config["colorbg"],
+        "  node [fontname=\"courier\" fontsize=%s shape=box width=0.25 fillcolor=\"white\" style=\"filled,solid\"];"
+        % self.config["fontsize"],
+        "  edge [style=solid color=\"%s\" penwidth=0.75 arrowhead=vee arrowsize=0.75 ];"
+        % self.config["coloredge"],
+        "",
+        *[f"  {x}" for x in self.nodes],
+        "",
+        "  subgraph cluster_0 {",
+        '    node [style=\"filled,solid\"];',
+        "    label = \"%s\";" %
+        (self.config["cluster0"]["title"]
+         if self.config["writeupyml"] else os.path.basename(dotfile)),
+    ]
     dotgraph.append("    color = \"%s\";" % (self.config["colorborder"]))
-    dotgraph.extend(["    %s" % (x) for x in self.edges])
-    dotgraph.append("  }")
-    dotgraph.append("}")
-    dotgraph.append("")
+    dotgraph.extend([f"    {x}" for x in self.edges])
+    dotgraph.extend(("  }", "}", ""))
     with open(dotfile, "w") as fp:
       fp.write("\n".join(dotgraph))
 
     if self.config["savehtml"]:
-      d3graph = []
-      d3graph.append("<!DOCTYPE html>")
-      d3graph.append("<meta charset=\"utf-8\">")
-      d3graph.append("<body>")
-      d3graph.append("<script src=\"https://d3js.org/d3.v5.min.js\"></script>")
-      d3graph.append("<script src=\"https://unpkg.com/@hpcc-js/wasm@0.3.11/dist/index.min.js\"></script>")
-      d3graph.append("<script src=\"https://unpkg.com/d3-graphviz@3.0.5/build/d3-graphviz.js\"></script>")
-      d3graph.append("<div id=\"graph\" style=\"text-align: center;\"></div>")
-      d3graph.append("<script>")
-      d3graph.append("d3.select(\"#graph\").graphviz().renderDot(`")
-      d3graph.extend(dotgraph)
-      d3graph.append("`);")
-      d3graph.append("</script>")
-      htmlfile = "%s.html" % (".".join(dotfile.split(".")[:-1]))
+      d3graph = [
+          "<!DOCTYPE html>",
+          '<meta charset=\"utf-8\">',
+          "<body>",
+          '<script src=\"https://d3js.org/d3.v5.min.js\"></script>',
+          '<script src=\"https://unpkg.com/@hpcc-js/wasm@0.3.11/dist/index.min.js\"></script>',
+          '<script src=\"https://unpkg.com/d3-graphviz@3.0.5/build/d3-graphviz.js\"></script>',
+          '<div id=\"graph\" style=\"text-align: center;\"></div>',
+          "<script>",
+          'd3.select(\"#graph\").graphviz().renderDot(`',
+          *dotgraph,
+          "`);",
+          "</script>",
+      ]
+      htmlfile = f'{".".join(dotfile.split(".")[:-1])}.html'
       with open(htmlfile, "w") as fp:
         fp.write("\n".join(d3graph))
 
-    pngfile = "%s.png" % (".".join(dotfile.split(".")[:-1]))
-    subprocess.call("/usr/bin/dot -Tpng %s -o %s" % (dotfile, pngfile), shell=True)
+    pngfile = f'{".".join(dotfile.split(".")[:-1])}.png'
+    subprocess.call(f"/usr/bin/dot -Tpng {dotfile} -o {pngfile}", shell=True)
 
     return dotgraph
 
 
 if __name__ == "__main__":
   if len(sys.argv) != 2:
-    print("USAGE: %s <filename>" % (sys.argv[0]))
+    print(f"USAGE: {sys.argv[0]} <filename>")
     sys.exit(1)
 
   if not os.path.exists(sys.argv[-1]):
-    print("no such file: %s" % (sys.argv[-1]))
+    print(f"no such file: {sys.argv[-1]}")
     sys.exit(2)
 
   infilename = sys.argv[-1]

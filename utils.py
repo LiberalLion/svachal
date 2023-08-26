@@ -19,25 +19,23 @@ import matplotlib.pyplot as plt
 def highlight(text, color="black", bold=False):
   resetcode = "\x1b[0m"
   color = color.lower().strip()
-  if color == "black":
-    colorcode = "\x1b[0;30m" if not bold else "\x1b[1;30m"
-  elif color == "white":
-    colorcode = "\x1b[0;37m" if not bold else "\x1b[1;37m"
-  elif color == "red":
-    colorcode = "\x1b[0;31m" if not bold else "\x1b[1;31m"
-  elif color == "green":
-    colorcode = "\x1b[0;32m" if not bold else "\x1b[1;32m"
-  elif color == "yellow":
-    colorcode = "\x1b[0;33m" if not bold else "\x1b[1;33m"
-  elif color == "blue":
+  if color == "blue":
     colorcode = "\x1b[0;34m" if not bold else "\x1b[1;34m"
-  elif color == "magenta":
-    colorcode = "\x1b[0;35m" if not bold else "\x1b[1;35m"
   elif color == "cyan":
     colorcode = "\x1b[0;36m" if not bold else "\x1b[1;36m"
+  elif color == "green":
+    colorcode = "\x1b[0;32m" if not bold else "\x1b[1;32m"
+  elif color == "magenta":
+    colorcode = "\x1b[0;35m" if not bold else "\x1b[1;35m"
+  elif color == "red":
+    colorcode = "\x1b[0;31m" if not bold else "\x1b[1;31m"
+  elif color == "white":
+    colorcode = "\x1b[0;37m" if not bold else "\x1b[1;37m"
+  elif color == "yellow":
+    colorcode = "\x1b[0;33m" if not bold else "\x1b[1;33m"
   else:
     colorcode = "\x1b[0;30m" if not bold else "\x1b[1;30m"
-  return "%s%s%s" % (colorcode, text, resetcode)
+  return f"{colorcode}{text}{resetcode}"
 
 def black(text):
   return highlight(text, color="black", bold=False)
@@ -88,30 +86,28 @@ def cyan_bold(text):
   return highlight(text, color="cyan", bold=True)
 
 def debug(text):
-  print("%s %s" % (blue_bold("[*]"), text))
+  print(f'{blue_bold("[*]")} {text}')
 
 def info(text):
-  print("%s %s" % (green_bold("[+]"), text))
+  print(f'{green_bold("[+]")} {text}')
 
 def warn(text):
-  print("%s %s" % (yellow_bold("[!]"), text))
+  print(f'{yellow_bold("[!]")} {text}')
 
 def error(text):
-  print("%s %s" % (red_bold("[-]"), text))
+  print(f'{red_bold("[-]")} {text}')
 
 def expand_env(var="$HOME"):
   return os.environ[var.replace("$", "")]
 
 def trim(text, maxq=40):
-  return "%s..." % (text[:maxq]) if len(text) > maxq else text
+  return f"{text[:maxq]}..." if len(text) > maxq else text
 
 def mkdirp(path):
   try:
     os.makedirs(path)
   except OSError as exc:
-    if exc.errno == errno.EEXIST and os.path.isdir(path):
-      pass
-    else:
+    if exc.errno != errno.EEXIST or not os.path.isdir(path):
       raise
 
 def search_files(dirpath="./", regex="*"):
@@ -198,17 +194,11 @@ def get_http_res(url, headers={}, requoteuri=False):
 
 def get_http(url, headers={}):
   res = requests.get(cleanup_url(url), headers=headers)
-  if res.status_code == 200:
-    return res.json()
-  else:
-    return {}
+  return res.json() if res.status_code == 200 else {}
 
 def post_http(url, data={}, headers={}):
   res = requests.post(cleanup_url(url), data=json.dumps(data), headers=headers)
-  if res.status_code == 200:
-    return res.json()
-  else:
-    return {}
+  return res.json() if res.status_code == 200 else {}
 
 def strip_html(data):
   return re.sub("\s+", " ", BeautifulSoup(data, "lxml").text)
@@ -224,48 +214,42 @@ def cleanup_url(url):
 
 def cleanup_name(name):
   return re.sub(r"[\W_]", "", name.lower())
-  return name.lower().replace(" ", "").replace(":", "").replace("_", "").replace("-", "")
 
 def ghsearchlinks(items, repourl, delim=", "):
   if isinstance(items, str):
-    return "[`%s`](%s/search?q=%s&unscoped_q=%s)" % (items, repourl, items, items)
+    return f"[`{items}`]({repourl}/search?q={items}&unscoped_q={items})"
   else:
-    return delim.join([ "[%s](%s/search?q=%s&unscoped_q=%s)" % (x, repourl, x, x) for x in items])
+    return delim.join(
+        [f"[{x}]({repourl}/search?q={x}&unscoped_q={x})" for x in items])
 
 def anchorformat(items, repourl, delim=", "):
   if isinstance(items, str):
-    if items.startswith("enumerate_") or items.startswith("exploit_") or items.startswith("privesc_"):
-      return "[`%s`](%s#%s)" % (items, repourl, items)
+    return (f"[`{items}`]({repourl}#{items})"
+            if items.startswith("enumerate_") or items.startswith("exploit_")
+            or items.startswith("privesc_") else ghsearchlinks(items, repourl))
+  results = []
+  for x in items:
+    if x.startswith("enumerate_") or x.startswith("exploit_") or x.startswith("privesc_"):
+      results.append(f"[`{x}`]({repourl}#{x})")
     else:
-      return ghsearchlinks(items, repourl)
-  else:
-    results = []
-    for x in items:
-      if x.startswith("enumerate_") or x.startswith("exploit_") or x.startswith("privesc_"):
-        results.append("[`%s`](%s#%s)" % (x, repourl, x))
-      else:
-        results.append(ghsearchlinks(x, repourl))
-    return delim.join(results)
+      results.append(ghsearchlinks(x, repourl))
+  return delim.join(results)
 
 def anchorformatttps(items, repourl="https://github.com/7h3rAm/writeups", delim=", "):
   if isinstance(items, str):
-    if items.startswith("enumerate_") or items.startswith("exploit_") or items.startswith("privesc_"):
-      return "[%s](%s#%s)" % (items, repourl, items)
+    return (f"[{items}]({repourl}#{items})"
+            if items.startswith("enumerate_") or items.startswith("exploit_")
+            or items.startswith("privesc_") else ghsearchlinks(items, repourl))
+  results = []
+  for x in items:
+    if x.startswith("enumerate_") or x.startswith("exploit_") or x.startswith("privesc_"):
+      results.append(f"[{x}]({repourl}#{x})")
     else:
-      return ghsearchlinks(items, repourl)
-  else:
-    results = []
-    for x in items:
-      if x.startswith("enumerate_") or x.startswith("exploit_") or x.startswith("privesc_"):
-        results.append("[%s](%s#%s)" % (x, repourl, x))
-      else:
-        results.append(ghsearchlinks(x, repourl))
-    return delim.join(results)
+      results.append(ghsearchlinks(x, repourl))
+  return delim.join(results)
 
 def mdurl(datadict):
-  results = []
-  for item in datadict:
-    results.append("[%s](%s)" % (item["name"], item["url"]))
+  results = [f'[{item["name"]}]({item["url"]})' for item in datadict]
   return "<br /><br />".join(results)
 
 def obfuscate(data, mass=0.81, replchr="."):
@@ -283,12 +267,9 @@ def obfuscate(data, mass=0.81, replchr="."):
 
 def monojoin(items):
   if isinstance(items, str):
-    return "`%s`" % (items)
-  else:
-    results = []
-    for x in items:
-      results.append("`%s`" % (x))
-    return "<br /><br />".join(results)
+    return f"`{items}`"
+  results = [f"`{x}`" for x in items]
+  return "<br /><br />".join(results)
 
 def customsort(items):
   return [str(y) for y in sorted([int(x) for x in items])]
@@ -310,9 +291,9 @@ def yturl2verboseid(url):
     if param.startswith("t="):
       t = param
   if v and t:
-    return "youtu.be/%s?%s" % (v, t)
+    return f"youtu.be/{v}?{t}"
   elif v:
-    return "youtu.be/%s" % (v)
+    return f"youtu.be/{v}"
   else:
     return url
 
@@ -325,17 +306,17 @@ def to_color_difficulty(sparkline):
 def to_emoji(text):
   text = str(text)
   # https://github.com/ikatyang/emoji-cheat-sheet
-  if "private" == text.lower():
+  if text.lower() == "private":
     return red("") # 
-  elif "public" == text.lower():
+  elif text.lower() == "public":
     return green("")
-  elif "oscplike" == text.lower():
+  elif text.lower() == "oscplike":
     return magenta("")
-  elif "access_root" == text.lower():
+  elif text.lower() == "access_root":
     return red("")
-  elif "access_user" == text.lower():
+  elif text.lower() == "access_user":
     return yellow("")
-  elif "has_writeup" == text.lower():
+  elif text.lower() == "has_writeup":
     return yellow("")
   elif "android" in text.lower():
     return green("")
@@ -343,31 +324,31 @@ def to_emoji(text):
     return magenta("")
   elif "bsd" in text.lower():
     return red("")
-  elif "linux" == text.lower():
+  elif text.lower() == "linux":
     return yellow("")
   elif "solaris" in text.lower():
     return magenta("")
   elif "unix" in text.lower():
     return magenta("")
-  elif "windows" == text.lower():
+  elif text.lower() == "windows":
     return blue("")
   elif "other" in text.lower():
     return magenta("")
-  elif "difficulty_unknown" == text.lower():
+  elif text.lower() == "difficulty_unknown":
     return ""
-  elif "startingpoint" == text.lower():
+  elif text.lower() == "startingpoint":
     return white("")
-  elif "info" == text.lower():
+  elif text.lower() == "info":
     return white("")
-  elif "warmpup" == text.lower():
+  elif text.lower() == "warmpup":
     return green("")
-  elif "easy" == text.lower():
+  elif text.lower() == "easy":
     return green("")
-  elif "medium" == text.lower():
+  elif text.lower() == "medium":
     return yellow("")
-  elif "hard" == text.lower():
+  elif text.lower() == "hard":
     return yellow("")
-  elif "insane" == text.lower():
+  elif text.lower() == "insane":
     return red("")
   else:
     return ""
@@ -376,27 +357,27 @@ def to_markdown_table(pt):
   _junc = pt.junction_char
   if _junc != "|":
     pt.junction_char = "|"
-  markdown = [row for row in pt.get_string().split("\n")[1:-1]]
+  markdown = list(pt.get_string().split("\n")[1:-1])
   pt.junction_char = _junc
   return "\n".join(markdown)
 
 def get_table(header, rows, delim="___", aligndict=None, markdown=False, colalign=None, multiline=False):
   table = prettytable.PrettyTable()
   table.field_names = header
-  table.align = "c"; table.valign = "m"
+  table.align = "c"
+  table.valign = "m"
   for row in rows:
     table.add_row(row.split(delim))
   if markdown:
-    if colalign in ["left", "center", "right"]:
-      if colalign == "left":
-        return to_markdown_table(table).replace("|-", "|:")
-      elif colalign == "center":
-        return to_markdown_table(table).replace("-|-", ":|:").replace("|-", "|:").replace("-|", ":|")
-      elif colalign == "right":
-        return to_markdown_table(table).replace("-|", ":|")
-    else:
+    if colalign not in ["left", "center", "right"]:
       #return table.get_html_string()
       return to_markdown_table(table)
+    if colalign == "left":
+      return to_markdown_table(table).replace("|-", "|:")
+    elif colalign == "center":
+      return to_markdown_table(table).replace("-|-", ":|:").replace("|-", "|:").replace("-|", ":|")
+    elif colalign == "right":
+      return to_markdown_table(table).replace("-|", ":|")
   else:
     if aligndict:
       for colheader in aligndict:
@@ -443,7 +424,7 @@ def to_gsheet(data):
     os = item["os"].title()
     points = item["points"] if item["points"] else ""
     owned = "Yes" if item["owned_user"] or item["owned_root"] else "No"
-    lines.append("%s,%s,%s,%s,%s," % (name, infra, os, points, owned))
+    lines.append(f"{name},{infra},{os},{points},{owned},")
   print("Name,Infra,OS,Points,Difficulty,Owned,Writeup")
   for line in sorted(lines):
     print(line)
@@ -462,7 +443,7 @@ def show_machines(data, sort_key="name", jsonify=False, gsheet=False, showttps=F
     if data[0].get("expires_at"):
       header = ["#", "ID", "Name", "Expires", "Rating", "Difficulty", "OS", "OSCPlike", "Owned", "Writeup", "TTPs"] if showttps else ["#", "ID", "Name", "Expires", "Rating", "Difficulty", "OS", "OSCPlike", "Owned", "Writeup"]
       for idx, entry in enumerate(sorted(data, key=lambda k: k[sort_key].lower())):
-        mid = "%s%s" % (blue("%s#" % (entry["verbose_id"].split("#")[0])), blue_bold("%s" % (entry["verbose_id"].split("#")[1])))
+        mid = f"""{blue(f'{entry["verbose_id"].split("#")[0]}#')}{blue_bold(f'{entry["verbose_id"].split("#")[1]}')}"""
         name = trim(entry["name"], maxq=30)
         os = to_emoji(entry["os"])
         difficulty = entry["difficulty"] if entry.get("difficulty") and entry["difficulty"] else "difficulty_unknown"
@@ -481,37 +462,18 @@ def show_machines(data, sort_key="name", jsonify=False, gsheet=False, showttps=F
           ",".join([red(x) for x in entry["writeups"]["7h3rAm"]["ttps"]["privesc"]])
           ]).strip() if entry.get("writeups") and entry["writeups"].get("7h3rAm") else ""
         if showttps:
-          rows.append("%s.___%s___%s___%s___%s___%s___%s___%s___%s___%s___%s" % (
-            idx+1,
-            mid,
-            name,
-            entry["expires_at"],
-            rating,
-            to_emoji(difficulty),
-            os,
-            to_emoji(oscplike),
-            to_emoji(owned),
-            writeup,
-            ttps,
-          ))
+          rows.append(
+              f'{idx + 1}.___{mid}___{name}___{entry["expires_at"]}___{rating}___{to_emoji(difficulty)}___{os}___{to_emoji(oscplike)}___{to_emoji(owned)}___{writeup}___{ttps}'
+          )
         else:
-          rows.append("%s.___%s___%s___%s___%s___%s___%s___%s___%s___%s" % (
-            idx+1,
-            mid,
-            name,
-            entry["expires_at"],
-            rating,
-            to_emoji(difficulty),
-            os,
-            to_emoji(oscplike),
-            to_emoji(owned),
-            writeup,
-          ))
+          rows.append(
+              f'{idx + 1}.___{mid}___{name}___{entry["expires_at"]}___{rating}___{to_emoji(difficulty)}___{os}___{to_emoji(oscplike)}___{to_emoji(owned)}___{writeup}'
+          )
 
     elif data[0].get("search_url"):
       header = ["#", "ID", "Name", "Follow", "Rating", "Difficulty", "OS", "OSCPlike", "Owned", "Writeup", "TTPs"] if showttps else ["#", "ID", "Name", "Follow", "Rating", "Difficulty", "OS", "OSCPlike", "Owned", "Writeup"]
       for idx, entry in enumerate(sorted(data, key=lambda k: k[sort_key].lower())):
-        mid = "%s%s" % (blue("%s#" % (entry["verbose_id"].split("#")[0])), blue_bold("%s" % (entry["verbose_id"].split("#")[1])))
+        mid = f"""{blue(f'{entry["verbose_id"].split("#")[0]}#')}{blue_bold(f'{entry["verbose_id"].split("#")[1]}')}"""
         name = trim(entry["name"], maxq=30)
         match = trim(entry["search_text"].replace(" - ", " ").strip(), maxq=30) if entry.get("search_text") else ""
         if entry["search_url"].startswith("youtu.be/"):
@@ -535,37 +497,18 @@ def show_machines(data, sort_key="name", jsonify=False, gsheet=False, showttps=F
           ",".join([red(x) for x in entry["writeups"]["7h3rAm"]["ttps"]["privesc"]])
           ]).strip() if entry.get("writeups") and entry["writeups"].get("7h3rAm") else ""
         if showttps:
-          rows.append("%s.___%s___%s___%s___%s___%s___%s___%s___%s___%s___%s" % (
-            idx+1,
-            mid,
-            name,
-            follow,
-            rating,
-            to_emoji(difficulty),
-            os,
-            to_emoji(oscplike),
-            to_emoji(owned),
-            writeup,
-            ttps,
-          ))
+          rows.append(
+              f"{idx + 1}.___{mid}___{name}___{follow}___{rating}___{to_emoji(difficulty)}___{os}___{to_emoji(oscplike)}___{to_emoji(owned)}___{writeup}___{ttps}"
+          )
         else:
-          rows.append("%s.___%s___%s___%s___%s___%s___%s___%s___%s___%s" % (
-            idx+1,
-            mid,
-            name,
-            follow,
-            rating,
-            to_emoji(difficulty),
-            os,
-            to_emoji(oscplike),
-            to_emoji(owned),
-            writeup,
-          ))
+          rows.append(
+              f"{idx + 1}.___{mid}___{name}___{follow}___{rating}___{to_emoji(difficulty)}___{os}___{to_emoji(oscplike)}___{to_emoji(owned)}___{writeup}"
+          )
 
     else:
       header = ["#", "ID", "Name", "Rating", "Difficulty", "OS", "OSCPlike", "Owned", "Writeup", "TTPs"] if showttps else ["#", "ID", "Name", "Rating", "Difficulty", "OS", "OSCPlike", "Owned", "Writeup"]
       for idx, entry in enumerate(sorted(data, key=lambda k: k[sort_key].lower())):
-        mid = "%s%s" % (blue("%s#" % (entry["verbose_id"].split("#")[0])), blue_bold("%s" % (entry["verbose_id"].split("#")[1])))
+        mid = f"""{blue(f'{entry["verbose_id"].split("#")[0]}#')}{blue_bold(f'{entry["verbose_id"].split("#")[1]}')}"""
         name = trim(entry["name"], maxq=30)
         os = to_emoji(entry["os"])
         difficulty = entry["difficulty"] if entry.get("difficulty") and entry["difficulty"] else "difficulty_unknown"
@@ -584,37 +527,18 @@ def show_machines(data, sort_key="name", jsonify=False, gsheet=False, showttps=F
           ",".join([red(x) for x in entry["writeups"]["7h3rAm"]["ttps"]["privesc"]])
           ]).strip() if entry.get("writeups") and entry["writeups"].get("7h3rAm") else ""
         if showttps:
-          rows.append("%s.___%s___%s___%s___%s___%s___%s___%s___%s___%s" % (
-            idx+1,
-            mid,
-            name,
-            rating,
-            to_emoji(difficulty),
-            os,
-            to_emoji(oscplike),
-            to_emoji(owned),
-            writeup,
-            ttps,
-          ))
+          rows.append(
+              f"{idx + 1}.___{mid}___{name}___{rating}___{to_emoji(difficulty)}___{os}___{to_emoji(oscplike)}___{to_emoji(owned)}___{writeup}___{ttps}"
+          )
         else:
-          rows.append("%s.___%s___%s___%s___%s___%s___%s___%s___%s" % (
-            idx+1,
-            mid,
-            name,
-            rating,
-            to_emoji(difficulty),
-            os,
-            to_emoji(oscplike),
-            to_emoji(owned),
-            writeup,
-          ))
+          rows.append(
+              f"{idx + 1}.___{mid}___{name}___{rating}___{to_emoji(difficulty)}___{os}___{to_emoji(oscplike)}___{to_emoji(owned)}___{writeup}"
+          )
 
     to_table(header=header, rows=rows, delim="___", aligndict=None, markdown=False, multiline=False)
 
 def to_xkcd(plotdict, filename, title, rotate=True, trimlength=20):
-  datadict = {}
-  for key in plotdict:
-    datadict[key] = [[key], [plotdict[key]]]
+  datadict = {key: [[key], [plotdict[key]]] for key in plotdict}
   with plt.xkcd():
     for idx, label in enumerate(datadict):
       plt.bar(datadict[label][0], datadict[label][1])
