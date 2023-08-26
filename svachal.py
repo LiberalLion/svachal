@@ -18,26 +18,24 @@ import yml2dot
 
 class Svachal:
   def __init__(self, writeupdir, githubrepourl):
-    self.config = {}
-
-    self.config["writeupdir"] = writeupdir
-    self.config["githubrepourl"] = githubrepourl
-    # update the template.writeup.md and template.readme.md file with correct pdf metadata and github repo url
-
-    self.config["basedir"] = os.path.dirname(os.path.realpath(__file__))
+    self.config = {
+        "writeupdir": writeupdir,
+        "githubrepourl": githubrepourl,
+        "basedir": os.path.dirname(os.path.realpath(__file__)),
+    }
 
     self.config["machinesjson"] = "%s/toolbox/bootstrap/machines.json" % (utils.expand_env(var="$HOME"))
     self.machinesstats = utils.load_json(self.config["machinesjson"])
 
-    self.config["metayml"] = "%s/meta.yml" % (self.config["writeupdir"])
-    self.config["summaryyml"] = "%s/summary.yml" % (self.config["writeupdir"])
+    self.config["metayml"] = f'{self.config["writeupdir"]}/meta.yml'
+    self.config["summaryyml"] = f'{self.config["writeupdir"]}/summary.yml'
 
     self.config["templatedir"] = self.config["basedir"]
     self.config["templatefile"] = "template.writeup.md"
-    self.config["templateyml"] = "%s/template.writeup.yml" % (self.config["basedir"])
+    self.config["templateyml"] = f'{self.config["basedir"]}/template.writeup.yml'
 
     self.config["topcount"] = 10
-    self.config["ttpscsv"] = "%s/ttps.csv" % (self.config["writeupdir"])
+    self.config["ttpscsv"] = f'{self.config["writeupdir"]}/ttps.csv'
 
     self.infra = {
       "HTB": "HackTheBox",
@@ -55,7 +53,21 @@ class Svachal:
       return []
 
   def md2pdf(self, destdir, mdname, pdfname):
-    results = subprocess.run(['pandoc', '%s/%s' % (destdir, mdname), '-o', '%s/%s' % (destdir, pdfname), '--from', 'markdown+yaml_metadata_block+raw_html', '--highlight-style', 'tango', '--pdf-engine=xelatex'], cwd=destdir, stdout=subprocess.PIPE).stdout.decode('utf-8')
+    results = subprocess.run(
+        [
+            'pandoc',
+            f'{destdir}/{mdname}',
+            '-o',
+            f'{destdir}/{pdfname}',
+            '--from',
+            'markdown+yaml_metadata_block+raw_html',
+            '--highlight-style',
+            'tango',
+            '--pdf-engine=xelatex',
+        ],
+        cwd=destdir,
+        stdout=subprocess.PIPE,
+    ).stdout.decode('utf-8')
 
   def yml2md(self, ymlfile, templatefile, templatedir, destdir, destfile, ignoreprivate=False):
     dictyml = utils.load_yaml(ymlfile)
@@ -76,89 +88,128 @@ class Svachal:
     env.filters["customsort"] = utils.customsort
     template = env.get_template(templatefile)
     rendermd = template.render(dictyml)
-    destfilepath = "%s/%s" % (destdir, destfile)
+    destfilepath = f"{destdir}/{destfile}"
     utils.file_save(destfilepath, rendermd)
 
     if "summary.yml" not in ymlfile:
       if dictyml["writeup"].get("overview") and dictyml["writeup"]["overview"]["killchain"]:
         try:
           parentdir = "/".join(ymlfile.split("/")[:-1])
-          dotfile = "%s/killchain.dot" % (parentdir)
+          dotfile = f"{parentdir}/killchain.dot"
           killchain = self.y2d.process(dictyml["writeup"]["overview"]["killchain"], dotfile)
         except Exception as ex:
-          print("exception! failed to create overview killchain '%s'. please check below for more details:" % (destfile))
+          print(
+              f"exception! failed to create overview killchain '{destfile}'. please check below for more details:"
+          )
           print(repr(ex))
 
       try:
         self.md2pdf(destdir, destfile, "writeup.pdf")
       except Exception as ex:
-        print("exception! md file '%s' could not be converted to pdf. please check below for more details:" % (destfile))
+        print(
+            f"exception! md file '{destfile}' could not be converted to pdf. please check below for more details:"
+        )
         print(repr(ex))
 
     return destfilepath
 
   def plot(self):
     utils.to_xkcd(
-      plotdict=dict(sorted(sorted(self.summary["plot"]["ports"].items(), key=lambda x: x[1], reverse=True)[:self.config["topcount"]])),
-      filename="%s/top_ports.png" % (self.config["writeupdir"]),
-      title="Top Ports",
-      rotate=True
+        plotdict=dict(
+            sorted(
+                sorted(
+                    self.summary["plot"]["ports"].items(),
+                    key=lambda x: x[1],
+                    reverse=True,
+                )[:self.config["topcount"]])),
+        filename=f'{self.config["writeupdir"]}/top_ports.png',
+        title="Top Ports",
+        rotate=True,
     )
     utils.to_xkcd(
-      plotdict=dict(sorted(sorted(self.summary["plot"]["protocols"].items(), key=lambda x: x[1], reverse=True)[:self.config["topcount"]])),
-      filename="%s/top_protocols.png" % (self.config["writeupdir"]),
-      title="Top Protocols",
-      rotate=True
+        plotdict=dict(
+            sorted(
+                sorted(
+                    self.summary["plot"]["protocols"].items(),
+                    key=lambda x: x[1],
+                    reverse=True,
+                )[:self.config["topcount"]])),
+        filename=f'{self.config["writeupdir"]}/top_protocols.png',
+        title="Top Protocols",
+        rotate=True,
     )
     utils.to_xkcd(
-      plotdict=dict(sorted(sorted(self.summary["plot"]["services"].items(), key=lambda x: x[1], reverse=True)[:self.config["topcount"]])),
-      filename="%s/top_services.png" % (self.config["writeupdir"]),
-      title="Top Services",
-      rotate=True
+        plotdict=dict(
+            sorted(
+                sorted(
+                    self.summary["plot"]["services"].items(),
+                    key=lambda x: x[1],
+                    reverse=True,
+                )[:self.config["topcount"]])),
+        filename=f'{self.config["writeupdir"]}/top_services.png',
+        title="Top Services",
+        rotate=True,
     )
 
     utils.to_xkcd(
-      plotdict=dict(sorted(sorted(self.summary["plot"]["categories"].items(), key=lambda x: x[1], reverse=True)[:self.config["topcount"]])),
-      filename="%s/top_categories.png" % (self.config["writeupdir"]),
-      title="Top Categories",
-      rotate=True
+        plotdict=dict(
+            sorted(
+                sorted(
+                    self.summary["plot"]["categories"].items(),
+                    key=lambda x: x[1],
+                    reverse=True,
+                )[:self.config["topcount"]])),
+        filename=f'{self.config["writeupdir"]}/top_categories.png',
+        title="Top Categories",
+        rotate=True,
     )
 
     plotdict = {k: v for k, v in self.summary["plot"]["ttps"].items() if k.startswith("enumerate_")}
     utils.to_xkcd(
-      plotdict=dict(sorted(sorted(plotdict.items(), key=lambda x: x[1], reverse=True)[:self.config["topcount"]])),
-      filename="%s/top_ttps_enumerate.png" % (self.config["writeupdir"]),
-      title="Top TTPs - Phase #1 Enumeration",
-      rotate=True
+        plotdict=dict(
+            sorted(
+                sorted(plotdict.items(), key=lambda x: x[1],
+                       reverse=True)[:self.config["topcount"]])),
+        filename=f'{self.config["writeupdir"]}/top_ttps_enumerate.png',
+        title="Top TTPs - Phase #1 Enumeration",
+        rotate=True,
     )
     plotdict = {k: v for k, v in self.summary["plot"]["ttps"].items() if k.startswith("exploit_")}
     utils.to_xkcd(
-      plotdict=dict(sorted(sorted(plotdict.items(), key=lambda x: x[1], reverse=True)[:self.config["topcount"]])),
-      filename="%s/top_ttps_exploit.png" % (self.config["writeupdir"]),
-      title="Top TTPs - Phase #2 Exploitation",
-      rotate=True
+        plotdict=dict(
+            sorted(
+                sorted(plotdict.items(), key=lambda x: x[1],
+                       reverse=True)[:self.config["topcount"]])),
+        filename=f'{self.config["writeupdir"]}/top_ttps_exploit.png',
+        title="Top TTPs - Phase #2 Exploitation",
+        rotate=True,
     )
     plotdict = {k: v for k, v in self.summary["plot"]["ttps"].items() if k.startswith("privesc_")}
     utils.to_xkcd(
-      plotdict=dict(sorted(sorted(plotdict.items(), key=lambda x: x[1], reverse=True)[:self.config["topcount"]])),
-      filename="%s/top_ttps_privesc.png" % (self.config["writeupdir"]),
-      title="Top TTPs - Phase #3 Privilege Escalation",
-      rotate=True
+        plotdict=dict(
+            sorted(
+                sorted(plotdict.items(), key=lambda x: x[1],
+                       reverse=True)[:self.config["topcount"]])),
+        filename=f'{self.config["writeupdir"]}/top_ttps_privesc.png',
+        title="Top TTPs - Phase #3 Privilege Escalation",
+        rotate=True,
     )
 
   def url2metadata(self, url):
     def search_by_key(data, machines, key="url"):
-      if machines and len(machines):
-        for entry in machines:
-          if key in ["name"]:
-            if data in entry[key].lower().strip():
-              return entry
-          if key in ["url"]:
-            if data == entry[key].lower().strip():
-              return entry
-          elif key in ["id"]:
-            if data == entry[key]:
-              return entry
+      if not machines or not len(machines):
+        return
+      for entry in machines:
+        if key in ["name"]:
+          if data in entry[key].lower().strip():
+            return entry
+        if key in ["url"]:
+          if data == entry[key].lower().strip():
+            return entry
+        elif key in ["id"]:
+          if data == entry[key]:
+            return entry
+
     url = url.lower().strip()
     stats, infra = None, ""
     writeupyml = utils.load_yaml(self.config["templateyml"])
@@ -166,7 +217,8 @@ class Svachal:
     writeupyml["writeup"]["metadata"]["references"] = [""]
     writeupyml["writeup"]["metadata"]["status"] = "private"
     writeupyml["writeup"]["metadata"]["tags"] = ["enumerate_", "exploit_", "privesc_"]
-    writeupyml["writeup"]["metadata"]["datetime"] = datetime.datetime.today().strftime("%Y%m%d")
+    writeupyml["writeup"]["metadata"]["datetime"] = datetime.datetime.now(
+    ).strftime("%Y%m%d")
     writeupyml["writeup"]["metadata"]["url"] = url
     writeupyml["writeup"]["metadata"]["name"] = "unknown"
     writeupyml["writeup"]["metadata"]["points"] = None
@@ -175,7 +227,7 @@ class Svachal:
     writeupyml["writeup"]["metadata"]["path"] = "misc.unknown"
     stats = search_by_key(url, self.machinesstats["machines"], key="url")
     if stats:
-      writeupyml["writeup"]["metadata"]["name"] = "%s" % (stats["name"])
+      writeupyml["writeup"]["metadata"]["name"] = f'{stats["name"]}'
       writeupyml["writeup"]["metadata"]["points"] = stats["points"] if stats.get("points") and stats["points"] else None
       writeupyml["writeup"]["metadata"]["matrix"] = stats["matrix"] if stats.get("matrix") and stats["matrix"] else None
       if stats["os"]:
@@ -185,15 +237,18 @@ class Svachal:
       if stats["infrastructure"] in ["htb", "hackthebox"]:
         writeupyml["writeup"]["metadata"]["infra"] = "HackTheBox"
         writeupyml["writeup"]["metadata"]["categories"].append("hackthebox")
-        writeupyml["writeup"]["metadata"]["path"] = "htb.%s" % (utils.cleanup_name(stats["shortname"]))
+        writeupyml["writeup"]["metadata"][
+            "path"] = f'htb.{utils.cleanup_name(stats["shortname"])}'
       elif stats["infrastructure"] in ["vh", "vulnhub"]:
         writeupyml["writeup"]["metadata"]["infra"] = "VulnHub"
         writeupyml["writeup"]["metadata"]["categories"].append("vulnhub")
-        writeupyml["writeup"]["metadata"]["path"] = "vulnhub.%s" % (utils.cleanup_name(stats["shortname"]))
+        writeupyml["writeup"]["metadata"][
+            "path"] = f'vulnhub.{utils.cleanup_name(stats["shortname"])}'
       elif stats["infrastructure"] in ["thm", "tryhackme"]:
         writeupyml["writeup"]["metadata"]["infra"] = "TryHackMe"
         writeupyml["writeup"]["metadata"]["categories"].append("tryhackme")
-        writeupyml["writeup"]["metadata"]["path"] = "thm.%s" % (utils.cleanup_name(stats["shortname"]))
+        writeupyml["writeup"]["metadata"][
+            "path"] = f'thm.{utils.cleanup_name(stats["shortname"])}'
     return writeupyml["writeup"]["metadata"]
 
   def metadata2yml(self, metadata):
@@ -204,7 +259,7 @@ class Svachal:
       except:
         infra = metadata["infra"]
 
-    formattedyml = """writeup:
+    return """writeup:
   metadata:
     status: %s
     datetime: %s
@@ -231,23 +286,26 @@ class Svachal:
         metadata["path"] if metadata["path"] else "",
         metadata["url"] if metadata["url"] else "",
         metadata["infocard"] if metadata["infocard"] else "",
-        "\n".join(["      - %s" % (x) for x in metadata["references"]]) if metadata["references"] else "      - ",
-        "\n".join(["      - %s" % (x) for x in metadata["categories"]]) if metadata["categories"] else "      - ",
-        "\n".join(["      - %s" % (x) for x in metadata["tags"]]) if metadata["tags"] else "      - ",
+        "\n".join([f"      - {x}" for x in metadata["references"]])
+        if metadata["references"] else "      - ",
+        "\n".join([f"      - {x}" for x in metadata["categories"]])
+        if metadata["categories"] else "      - ",
+        "\n".join([f"      - {x}" for x in metadata["tags"]])
+        if metadata["tags"] else "      - ",
         infra,
         metadata["name"] if metadata["name"] else "",
         metadata["url"] if metadata["url"] else "",
-      )
-    return formattedyml
+    )
 
   def opcode_start(self, args, manual=False):
     if manual:
       if len(args.split(".", 1)) != 2:
         return
-      metadata = {}
-      metadata["status"] = "private"
-      metadata["tags"] = ["enumerate_", "exploit_", "privesc_"]
-      metadata["datetime"] = datetime.datetime.today().strftime("%Y%m%d")
+      metadata = {
+          "status": "private",
+          "tags": ["enumerate_", "exploit_", "privesc_"],
+          "datetime": datetime.datetime.now().strftime("%Y%m%d"),
+      }
       metadata["infra"] = args.split(".", 1)[0].upper()
       metadata["name"] = args.split(".", 1)[1].title()
       metadata["points"] = None
@@ -264,37 +322,50 @@ class Svachal:
       print()
       self.config["destdirname"] = metadata["path"]
 
-    self.config["destdirpath"] = "%s/%s" % (self.config["writeupdir"], self.config["destdirname"])
-    self.config["writeupyml"] = "%s/writeup.yml" % (self.config["destdirpath"])
+    self.config[
+        "destdirpath"] = f'{self.config["writeupdir"]}/{self.config["destdirname"]}'
+    self.config["writeupyml"] = f'{self.config["destdirpath"]}/writeup.yml'
     if not os.path.isfile(self.config["writeupyml"]):
       utils.mkdirp(self.config["destdirpath"])
       writeupyml = utils.file_open(self.config["templateyml"])
       updatedwriteupyml = "%s\n%s" % (self.metadata2yml(metadata), "\n".join(writeupyml.split("\n")[23:]))
       utils.file_save(self.config["writeupyml"], updatedwriteupyml)
-      utils.info("writeup file '%s' created for target '%s'" % (self.config["writeupyml"], self.config["destdirname"]))
+      utils.info(
+          f"""writeup file '{self.config["writeupyml"]}' created for target '{self.config["destdirname"]}'"""
+      )
       for machine in self.machinesstats["machines"]:
         if machine["url"] == metadata["url"]:
 
           if machine.get("difficulty_ratings") and machine["difficulty_ratings"]:
-            utils.to_sparklines(machine["difficulty_ratings"] if machine["difficulty_ratings"] else [], filename="%s/ratings.png" % (self.config["destdirpath"]))
-            utils.info("created '%s/ratings.png' file for target '%s'" % (self.config["destdirpath"], self.config["destdirname"]))
+            utils.to_sparklines(
+                machine["difficulty_ratings"]
+                if machine["difficulty_ratings"] else [],
+                filename=f'{self.config["destdirpath"]}/ratings.png',
+            )
+            utils.info(
+                f"""created '{self.config["destdirpath"]}/ratings.png' file for target '{self.config["destdirname"]}'"""
+            )
 
           if machine.get("matrix") and machine["matrix"]:
             url = "https://quickchart.io/chart?bkg=rgba(255,255,255,0.2)&width=270&height=200&c={ type: 'radar', data: {fill: 'False', labels: ['Enumeration', 'Real-Life', 'CVE', ['Custom', 'Exploitation'], 'CTF-Like'], datasets: [{ label: 'User rated', data: %s, backgroundColor:'rgba(154,204,20,0.2)', borderColor:'rgb(154,204,20)', pointBackgroundColor:'rgb(154,204,20)' }, { label: 'Maker rated', data: %s, backgroundColor:'rgba(86,192,224,0.2)', borderColor:'rgb(86,192,224)', pointBackgroundColor:'rgb(86,192,224)' }] }, options: { layout:{ padding:25}, plugins: { legend: false,}, scale: { angleLines: { display: true, color: 'rgb(21,23,25)' }, ticks: { callback: function() {return ''}, backdropColor: 'rgba(0, 0, 0, 0)' }, gridLines: { color: 'rgb(51,54,60)', } }, } }" % (machine["matrix"]["aggregate"], machine["matrix"]["maker"])
             res = utils.get_http_res(url, requoteuri=True)
-            filename = "%s/matrix.png" % (self.config["destdirpath"])
+            filename = f'{self.config["destdirpath"]}/matrix.png'
             with open(filename, "wb") as fp:
               fp.write(res.content)
-            utils.info("created '%s/matrix.png' file for target '%s'" % (self.config["destdirpath"], self.config["destdirname"]))
+            utils.info(
+                f"""created '{self.config["destdirpath"]}/matrix.png' file for target '{self.config["destdirname"]}'"""
+            )
 
     else:
-      utils.warn("writeup file '%s' already exists for target '%s'" % (self.config["writeupyml"], self.config["destdirname"]))
+      utils.warn(
+          f"""writeup file '{self.config["writeupyml"]}' already exists for target '{self.config["destdirname"]}'"""
+      )
 
   def opcode_finish(self):
     self.config["destdirpath"] = "."
-    self.config["writeupyml"] = "%s/writeup.yml" % (self.config["destdirpath"])
+    self.config["writeupyml"] = f'{self.config["destdirpath"]}/writeup.yml'
     if not os.path.isfile(self.config["writeupyml"]):
-      utils.error("could not find writeup file '%s'" % (self.config["writeupyml"]))
+      utils.error(f"""could not find writeup file '{self.config["writeupyml"]}'""")
     else:
       self.yml2md(self.config["writeupyml"], self.config["templatefile"], self.config["templatedir"], self.config["destdirpath"], "writeup.md", ignoreprivate=True)
 
@@ -303,8 +374,8 @@ class Svachal:
     total = len(writeupdirs)
     privatewriteups = []
     for idx, wd in enumerate(sorted(writeupdirs, key=str.casefold)):
-      destdirpath = "%s/%s" % (self.config["writeupdir"], wd)
-      writeupyml = "%s/writeup.yml" % (destdirpath)
+      destdirpath = f'{self.config["writeupdir"]}/{wd}'
+      writeupyml = f"{destdirpath}/writeup.yml"
       destfilepath = self.yml2md(writeupyml, self.config["templatefile"], self.config["templatedir"], destdirpath, "writeup.md")
       print("(%03d/%03d) '%s' → '%s'" % (idx+1, total, writeupyml, destfilepath))
       if not destfilepath:
